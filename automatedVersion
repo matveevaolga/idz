@@ -1,0 +1,167 @@
+.data
+ask_x: .asciz "Enter x (double number, accuracy): "
+error_msg: .asciz "Error: x must be in range (0; 0.0005]!\n"
+expected_msg: .asciz "expected: "
+result_msg: .asciz "result: "
+enter: .asciz "\n"
+max_x: .double 0.0005
+min_x: .double 0
+two: .double 2
+test1: .double 0.0
+answer1: .double -1.0
+test2: .double -1.0
+answer2: .double -1.0
+test3: .double 0.0006
+answer3: .double -1.0
+test4: .double 0.000001
+answer4: .double 3.141592648614063
+test5: .double 0.0005
+answer5: .double 3.141406718496502
+
+.text
+main:
+    # Test 1
+    fld fa1, test1, t0           # Load x from test1
+    fld fa4, answer1, t0         # Load expected answer from answer1
+    fld fa2, max_x, t0 # Load max_x into fa2 for check_x
+    fld fa5, min_x, t0 # Load min_x into fa3 for check_x
+    jal check_x              # Check x
+    beq a0, zero, to_test2   # If x is invalid, branch to test 2
+
+    # Call function to compute pi
+    fld fa2, two, t0             # Load constant 2 into fa2
+    fmv.d fa0, fa5           # Initialize fa0 to 0.0 for pi[n]
+    jal vieta                # Call function vieta, result will be in fa3
+    jal print_result          # Print result
+    
+to_test2:
+    # Test 2
+    fld fa1, test2, t0           # Load x from test2
+    fld fa4, answer2, t0         # Load expected answer from answer2
+    fld fa2, max_x, t0 # Load max_x into fa2 for check_x
+    fld fa5, min_x, t0 # Load min_x into fa3 for check_x
+    jal check_x              # Check x
+    beq a0, zero, to_test3   # If x is invalid, branch to test 3
+
+    fld fa2, two, t0             # Load constant 2 into fa2
+    fmv.d fa0, fa5           # Initialize fa0 to 0.0 for pi[n]
+    jal vieta                # Call function vieta, result will be in fa3
+    jal print_result          # Print result
+
+to_test3:
+    # Test 3
+    fld fa1, test3, t0           # Load x from test3
+    fld fa4, answer3, t0         # Load expected answer from answer3
+    fld fa2, max_x, t0 # Load max_x into fa2 for check_x
+    fld fa5, min_x, t0 # Load min_x into fa3 for check_x
+    jal check_x              # Check x
+    beq a0, zero, to_test4   # If x is invalid, branch to test 4
+
+    fld fa2, two, t0             # Load constant 2 into fa2
+    fmv.d fa0, fa5           # Initialize fa0 to 0.0 for pi[n]
+    jal vieta                # Call function vieta, result will be in fa3
+    jal print_result          # Print result
+
+to_test4:
+    # Test 4
+    fld fa1, test4, t0           # Load x from test4
+    fld fa4, answer4, t0         # Load expected answer from answer4
+    fld fa2, max_x, t0 # Load max_x into fa2 for check_x
+    fld fa5, min_x, t0 # Load min_x into fa3 for check_x
+    jal check_x              # Check x
+    beq a0, zero, to_test5   # If x is invalid, branch to test 5
+
+    fld fa2, two, t0             # Load constant 2 into fa2
+    fmv.d fa0, fa5           # Initialize fa0 to 0.0 for pi[n]
+    jal vieta                # Call function vieta, result will be in fa3
+    jal print_result          # Print result
+
+to_test5:
+    # Test 5
+    fld fa1, test5, t0           # Load x from test5
+    fld fa4, answer5, t0         # Load expected answer from answer5
+    fld fa2, max_x, t0 # Load max_x into fa2 for check_x
+    fld fa5, min_x, t0 # Load min_x into fa3 for check_x
+    jal check_x              # Check x
+    beq a0, zero, end_program # If x is invalid, branch to error
+
+    fld fa2, two, t0             # Load constant 2 into fa2
+    fmv.d fa0, fa5           # Initialize fa0 to 0.0 for pi[n]
+    jal vieta                # Call function vieta, result will be in fa3
+    jal print_result          # Print result
+
+end_program:
+    li a7, 10                # Syscall code for exit
+    ecall
+
+print_result:
+    li a7, 4                 # Syscall code for write
+    la a0, expected_msg        # Load message for output
+    ecall
+
+    fmv.d fa0, fa4           # Prepare x for output
+    li a7, 3                 # Syscall code for printing float
+    ecall
+    
+    li a7, 4                 # Syscall code for write
+    la a0, enter        # Load message for output
+    ecall
+    
+    li a7, 4                 # Syscall code for write
+    la a0, result_msg        # Load message for output
+    ecall
+
+    fmv.d fa0, fa3           # Load the result of pi
+    li a7, 3                 # Syscall code for printing float
+    ecall
+    
+    li a7, 4                 # Syscall code for write
+    la a0, enter        # Load message for output
+    ecall
+
+    ret                       # Return to caller
+
+vieta:
+    addi sp, sp, -4 
+    sw ra, 0(sp)
+
+vieta_cycle:
+    fadd.d ft0, fa4, fa0     # ft0 = 2 + a(i-1)
+    fsqrt.d fa4, ft0         # a(i) = sqrt(2 + a(i-1))
+    fdiv.d ft3, fa0, fa4  
+
+    fsub.d ft0, fa2, ft3     # ft0 = pi(i-1) - pi(i)
+    fabs.d ft0, ft0          # |pi(i-1) - pi(i)|
+    fle.d t2, ft0, fa1       # Check |pi(i-1) - pi(i)| <= x
+    bnez t2, end_vieta       # If condition is met, exit
+
+    fmul.d fa3, fa3, ft3
+    fmv.d fa2, ft3
+    
+    j vieta_cycle
+    
+end_vieta:
+    fmv.d fa3, ft3
+    lw ra, 0(sp)
+    addi sp, sp, 4
+    ret
+    
+check_x:
+  mv t0, zero
+  mv t1, zero
+  li t3, 1
+    # Check if x is in the range (0; 0.0005]
+    fle.d t0, fa1, fa5 # Check: x <= 0
+  fgt.d t1, fa1, fa2 # Check: x > 0.0005
+  beq t0, t3, wrong_x_branch # If x <= 0, branch to error
+  beq t1, t3, wrong_x_branch # If x > 0.0005, branch to error
+  li a0, 1            # If all checks pass, set a0 to 1 (valid)
+    ret # Return from check_x
+
+wrong_x_branch:
+    # Print error message
+    li a7, 4
+    la a0, error_msg
+    ecall
+    li a0, 0           # Set a0 to 0 (invalid)
+  ret
